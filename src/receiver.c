@@ -1,6 +1,8 @@
+#include <errno.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/msg.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -13,16 +15,12 @@ typedef struct message {
   char msg_text[100];  // Message content
 } message_t;
 
-int keep_running = 1;  // Flag to control the loop, modified by signal handler
-
-// Signal handler for SIGINT (Ctrl+C)
-void handle_sigint(int sig) {
-  keep_running = 0;  // Set the flag to 0 to break the loop
-}
-
 int main() {
-  // Register the SIGINT signal handler
-  signal(SIGINT, handle_sigint);
+  // block sigint
+  sigset_t mask;
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGINT);
+  sigprocmask(SIG_BLOCK, &mask, NULL);
 
   int msgid;  // Message queue identifier
 
@@ -35,19 +33,29 @@ int main() {
 
   message_t msg;  // Declare a message structure
 
-  while (keep_running) {  // Loop until the SIGINT signal is received
+  while (1) {  // Loop until the SIGINT signal is received
     printf("(Receiver) Waiting to receive messages...\n");
 
     // Receive a message from the queue of type 1
     if (msgrcv(msgid, &msg, sizeof(message_t) - sizeof(long), 1, 0) == -1) {
-      perror("msgrcv");  // Print an error message if receiving fails
-      break;             // Exit the loop on failure
+      perror("msgrcv");
+      exit(1);
     }
 
     // Log the received message
     printf("(Receiver) Message received: %s\n", msg.msg_text);
+
+    //exit if message is "STOP"
+    if (strcmp(msg.msg_text, "STOP") == 0) {
+      break;
+    }
   }
 
-  printf("Receiver process completed.\n");  // Log program termination
-  return 0;                                 // Exit with a success status
+  // Remove the message queue before exiting
+  if (msgctl(msgid, IPC_RMID, NULL) == -1) {
+    perror("msgctl");    // Print an error message if removal fails
+    exit(EXIT_FAILURE);  // Exit the program with a failure status
+  }
+  printf("\t\tReceiver process terminated.\n");  // Log program termination
+  return 0;                                  // Exit with a success status
 }

@@ -35,17 +35,17 @@ int main() {
 
   // Wait for SIGINT to stop the sender process
   printf("Press Ctrl+C to stop the sender process and complete execution.\n");
-  signal(SIGINT, SIG_IGN);
-  pause();
 
-  // Kill the sender process
-  kill(sender_pid, SIGINT);
+  // block sigint
+  sigset_t mask;
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGINT);
+  sigprocmask(SIG_BLOCK, &mask, NULL);
+
   wait(NULL);  // Wait for sender to finish
+  wait(NULL);  // Wait for receiver to finish
 
-  // Wait for the receiver process to finish
-  wait(NULL);
-
-  printf("Parent process completed.\n");
+  printf("\t\tParent process completed.\n");
   return 0;
 }
 

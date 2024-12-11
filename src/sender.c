@@ -50,16 +50,17 @@ int main() {
     printf("(Sender) Message sent\n");  // Log the message sent status
     fflush(stdout);  // Ensure the message is printed immediately
 
-    sleep(2);  // Wait for 2 seconds before sending the next message
+    sleep(1);  // Wait for 2 seconds before sending the next message
   }
 
-  // Remove the message queue before exiting
-  if (msgctl(msgid, IPC_RMID, NULL) == -1) {
-    perror("msgctl");    // Print an error message if removal fails
-    exit(EXIT_FAILURE);  // Exit the program with a failure status
+  // send stop message
+  snprintf(msg.msg_text, 100, "STOP");
+  if (msgsnd(msgid, &msg, sizeof(message_t) - sizeof(long), 0) == -1) {
+    perror("msgsnd");    
+    exit(EXIT_FAILURE); 
   }
 
-  printf("Sender process terminated.\n");  // Log program termination
+  printf("\t\tSender process terminated.\n");  // Log program termination
   return 0;                                // Exit with a success status
 }
 
